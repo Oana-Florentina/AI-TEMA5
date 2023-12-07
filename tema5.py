@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import matplotlib.pyplot as plt
 
 class Action():
     LEFT = 0
@@ -66,7 +67,7 @@ class State():
       
 
 class QLearn():
-    def __init__(self, start_state, alpha=0.7, gamma=0.95, episode_count=10000, min_epsilon=0.1, decay_rate=0.005):
+    def __init__(self, start_state, alpha=0.7, gamma=0.95, episode_count=300, min_epsilon=0.1, decay_rate=0.005):
         self.start_state = start_state 
         self.alpha = alpha 
         self.gamma = gamma 
@@ -75,7 +76,8 @@ class QLearn():
         self.episode_count = episode_count
         
         self.epsilon = 1.0
-        
+        self.episode_rewards = [] #for the bonus
+
         self.q_table = np.zeros((State.lines * State.columns, Action.COUNT))
 
     def get_epsilon_greedy_action(self, state):
@@ -90,25 +92,37 @@ class QLearn():
 
     def train(self):
         for episode in range(self.episode_count):
-            curr_state = self.start_state          
+            curr_state = self.start_state   
+            total_episode_reward = 0       
             while True:
                 if curr_state.is_final_state():
                     break
                 
                 action = self.get_epsilon_greedy_action(curr_state)
                 next_state = curr_state.get_next_state(action)
-                
-                self.q_table[int(curr_state)][action] = (1 - self.alpha) * self.q_table[int(curr_state)][action] + self.alpha * (curr_state.get_reward(action) + self.gamma * max(self.q_table[int(next_state)])) 
+                reward = curr_state.get_reward(action)
+
+                total_episode_reward += reward
+                self.q_table[int(curr_state)][action] = (1 - self.alpha) * self.q_table[int(curr_state)][action] + self.alpha * (reward + self.gamma * max(self.q_table[int(next_state)])) 
 
                 curr_state = next_state
             self.decrease_epsilon()
+            self.episode_rewards.append(total_episode_reward)
 
     def print_policy(self):
+        print("Policy: ")
         for i in range(State.lines):
             for j in range(State.columns):
                 action = np.argmax(self.q_table[i * State.columns + j])
                 print(Action.arrows[action], end=' ')
             print()
+
+    def plot_episode_rewards(self):
+        plt.plot(np.arange(1, self.episode_count + 1), self.episode_rewards)
+
+        plt.xlabel("Episode")
+        plt.ylabel("Rewards")
+        plt.show()
             
 wind_effect = [0, 0, 0, 1, 1, 1, 2, 2, 1, 0]
 
@@ -116,3 +130,5 @@ start_state = State((3, 0), wind_effect)
 model = QLearn(start_state)
 model.train()
 model.print_policy()
+
+model.plot_episode_rewards()
